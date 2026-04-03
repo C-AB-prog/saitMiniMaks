@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String        @id @default(cuid())
+  name               String
+  phone              String        @unique
+  passwordHash       String
+  role               String        @default("USER")
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  ownedFocuses       Focus[]       @relation("FocusOwner")
+  focusMemberships   FocusMember[] @relation("FocusMemberUser")
+  addedMemberships   FocusMember[] @relation("FocusMemberAddedBy")
+}
+
+model Focus {
+  id          String        @id @default(cuid())
+  userId      String
+  title       String
+  description String
+  coverImage  String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation("FocusOwner", fields: [userId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  members     FocusMember[]
+
+  @@index([userId])
+}
+
+model FocusMember {
+  id            String   @id @default(cuid())
+  focusId        String
+  userId         String
+  addedByUserId  String
+  createdAt      DateTime @default(now())
+  focus          Focus    @relation(fields: [focusId], references: [id], onDelete: Cascade)
+  user           User     @relation("FocusMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  addedBy        User     @relation("FocusMemberAddedBy", fields: [addedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([focusId, userId])
+  @@index([focusId])
+  @@index([userId])
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  focusId     String
+  title       String
+  description String?
+  dueDate     String?
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  focus       Focus    @relation(fields: [focusId], references: [id], onDelete: Cascade)
+
+  @@index([focusId])
+  @@index([dueDate])
+  @@index([completed])
+}
